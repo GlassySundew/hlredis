@@ -1,0 +1,10 @@
+	{
+	"name" : "hlredis",
+	"url" : "https://github.com/GlassySundew/hlredis",
+	"license" : "BSD",
+	"contributors" : ["GlassySundew"],
+	"description" : "hl/c bindings for hiredis",
+	"version" : "0.1.0",
+	"releasenote" : "",
+	"dependencies": {}
+}
