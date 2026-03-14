@@ -3,7 +3,18 @@
 #include <hl.h>
 #include <stdlib.h>
 #include <string.h>
-#include <hiredis/hiredis.h>
+
+#if defined(__has_include)
+#  if __has_include(<hiredis/hiredis.h>)
+#    include <hiredis/hiredis.h>
+#  elif __has_include(<hiredis.h>)
+#    include <hiredis.h>
+#  else
+#    error "Could not find hiredis headers"
+#  endif
+#else
+#  include <hiredis/hiredis.h>
+#endif
 
 typedef struct hl_redis {
     void (*finalize)(struct hl_redis*);
