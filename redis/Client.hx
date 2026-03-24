@@ -2,13 +2,105 @@ package redis;
 
 class Client {
 
+	static function parseConnectionConfig( hostOrUrl : String, port : Null<Int> ) : {
+		host : String,
+		port : Int,
+		password : Null<String>,
+		db : Null<Int>
+	} {
+
+		if ( !StringTools.startsWith( hostOrUrl, "redis://" ) ) {
+			if ( port == null )
+				throw "Redis port is required when using host/port constructor";
+
+			return {
+				host : hostOrUrl,
+				port : port,
+				password : null,
+				db : null
+			};
+		}
+
+		var rest = hostOrUrl.substr( "redis://".length );
+		var slashIdx = rest.indexOf( "/" );
+		var authority = slashIdx == -1 ? rest : rest.substr( 0, slashIdx );
+		var path = slashIdx == -1 ? "" : rest.substr( slashIdx + 1 );
+		var atIdx = authority.lastIndexOf( "@" );
+		var userInfo = atIdx == -1 ? null : authority.substr( 0, atIdx );
+		var hostPort = atIdx == -1 ? authority : authority.substr( atIdx + 1 );
+		var parsedHost = hostPort;
+		var parsedPort : Null<Int> = 6379;
+		var parsedPassword : Null<String> = null;
+		var parsedDb : Null<Int> = null;
+
+		if ( userInfo != null && userInfo != "" ) {
+			var colonIdx = userInfo.indexOf( ":" );
+			var passwordPart = colonIdx == -1 ? userInfo : userInfo.substr( colonIdx + 1 );
+			parsedPassword = StringTools.urlDecode( passwordPart );
+		}
+
+		if ( StringTools.startsWith( hostPort, "[" ) ) {
+			var endBracket = hostPort.indexOf( "]" );
+			if ( endBracket == -1 )
+				throw "Invalid Redis URL";
+
+			parsedHost = hostPort.substr( 1, endBracket - 1 );
+			if ( endBracket + 1 < hostPort.length ) {
+				if ( hostPort.charAt( endBracket + 1 ) != ":" )
+					throw "Invalid Redis URL";
+
+				parsedPort = Std.parseInt( hostPort.substr( endBracket + 2 ) );
+			}
+		} else {
+			var colonIdx = hostPort.lastIndexOf( ":" );
+			if ( colonIdx > -1 ) {
+				parsedHost = hostPort.substr( 0, colonIdx );
+				parsedPort = Std.parseInt( hostPort.substr( colonIdx + 1 ) );
+			}
+		}
+
+		if ( parsedHost == "" )
+			throw "Redis host is required";
+
+		if ( path != "" ) {
+			var dbPart = path.split( "/" )[0];
+			if ( dbPart != "" ) {
+				parsedDb = Std.parseInt( dbPart );
+				if ( parsedDb == null )
+					throw "Invalid Redis database index";
+			}
+		}
+
+		if ( parsedPort == null )
+			throw "Invalid Redis port";
+
+		return {
+			host : StringTools.urlDecode( parsedHost ),
+			port : parsedPort,
+			password : parsedPassword,
+			db : parsedDb
+		};
+	}
+
 	var h : Dynamic;
 
-	public function new( host : String, port : Int ) {
+	public function new( hostOrUrl : String, ?port : Int ) {
 
-		h = Redis.redis_connect( @:privateAccess host.toUtf8(), port );
+		var cfg = parseConnectionConfig( hostOrUrl, port );
+
+		h = Redis.redis_connect( @:privateAccess cfg.host.toUtf8(), cfg.port );
 		if ( h == null )
 			throw "Redis connect failed";
+
+		if ( cfg.password != null && !auth( cfg.password ) ) {
+			close();
+			throw "Redis auth failed";
+		}
+
+		if ( cfg.db != null && !select( cfg.db ) ) {
+			close();
+			throw "Redis select failed";
+		}
 	}
 
 	public function auth( password : String ) : Bool {
@@ -28,6 +120,46 @@ class Client {
 			throw "Redis command failed";
 
 		return new Reply( r );
+	}
+
+	public function publish( channel : String, message : String ) : Int {
+
+		var delivered = Redis.redis_publish( h, @:privateAccess channel.toUtf8(), @:privateAccess message.toUtf8() );
+		if ( delivered < 0 )
+			throw "Redis publish failed";
+
+		return delivered;
+	}
+
+	public function subscribe( channel : String ) : Void {
+
+		if ( !Redis.redis_subscribe( h, @:privateAccess channel.toUtf8() ) )
+			throw "Redis subscribe failed";
+	}
+
+	public function unsubscribe( channel : String ) : Void {
+
+		if ( !Redis.redis_unsubscribe( h, @:privateAccess channel.toUtf8() ) )
+			throw "Redis unsubscribe failed";
+	}
+
+	public function receiveReply() : Reply {
+
+		var r = Redis.redis_get_reply( h );
+		if ( r == null )
+			throw "Redis receive failed";
+
+		return new Reply( r );
+	}
+
+	public function receiveMessage() : PubSubMessage {
+
+		return PubSubMessage.fromReply( receiveReply() );
+	}
+
+	public function pipeline() : Pipeline {
+
+		return new Pipeline( h );
 	}
 
 	public function close() : Void {

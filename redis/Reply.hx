@@ -2,12 +2,12 @@ package redis;
 
 class Reply {
 
-	public static inline var STRING = 1;
-	public static inline var ARRAY = 2;
-	public static inline var INTEGER = 3;
-	public static inline var NIL = 4;
-	public static inline var STATUS = 5;
-	public static inline var ERROR = 6;
+	public static final STRING = 1;
+	public static final ARRAY = 2;
+	public static final INTEGER = 3;
+	public static final NIL = 4;
+	public static final STATUS = 5;
+	public static final ERROR = 6;
 
 	var h : Dynamic;
 

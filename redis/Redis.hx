@@ -24,6 +24,42 @@ class Redis {
 		return null;
 	}
 
+	public static function redis_append_hset( handle : RedisHandle, key : hl.Bytes, field : hl.Bytes, value : hl.Bytes ) : Bool {
+		return false;
+	}
+
+	public static function redis_append_expire( handle : RedisHandle, key : hl.Bytes, ttlSeconds : Int ) : Bool {
+		return false;
+	}
+
+	public static function redis_append_sadd( handle : RedisHandle, key : hl.Bytes, value : hl.Bytes ) : Bool {
+		return false;
+	}
+
+	public static function redis_append_srem( handle : RedisHandle, key : hl.Bytes, value : hl.Bytes ) : Bool {
+		return false;
+	}
+
+	public static function redis_append_del( handle : RedisHandle, key : hl.Bytes ) : Bool {
+		return false;
+	}
+
+	public static function redis_subscribe( handle : RedisHandle, channel : hl.Bytes ) : Bool {
+		return false;
+	}
+
+	public static function redis_unsubscribe( handle : RedisHandle, channel : hl.Bytes ) : Bool {
+		return false;
+	}
+
+	public static function redis_publish( handle : RedisHandle, channel : hl.Bytes, message : hl.Bytes ) : Int {
+		return 0;
+	}
+
+	public static function redis_get_reply( handle : RedisHandle ) : RedisReplyHandle {
+		return null;
+	}
+
 	public static function redis_reply_type( reply : RedisReplyHandle ) : Int {
 		return 0;
 	}

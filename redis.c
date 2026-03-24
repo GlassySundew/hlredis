@@ -2,6 +2,7 @@
 
 #include <hl.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 #if defined(__has_include)
@@ -93,6 +94,120 @@ HL_PRIM hl_redis_reply* HL_NAME(redis_cmd)(hl_redis* c, vbyte* cmd) {
     return h;
 }
 
+static bool append_command_argv(hl_redis* c, int argc, const char** argv) {
+    size_t lens[4];
+    int i;
+
+    if (!c || !c->ctx) return false;
+    for (i = 0; i < argc; ++i) {
+        lens[i] = strlen(argv[i]);
+    }
+
+    return redisAppendCommandArgv(c->ctx, argc, argv, lens) == REDIS_OK;
+}
+
+HL_PRIM bool HL_NAME(redis_append_hset)(hl_redis* c, vbyte* key, vbyte* field, vbyte* value) {
+    const char* argv[4];
+    argv[0] = "HSET";
+    argv[1] = (const char*)key;
+    argv[2] = (const char*)field;
+    argv[3] = (const char*)value;
+    return append_command_argv(c, 4, argv);
+}
+
+HL_PRIM bool HL_NAME(redis_append_expire)(hl_redis* c, vbyte* key, int ttl_seconds) {
+    char ttl_buf[32];
+    const char* argv[3];
+
+    snprintf(ttl_buf, sizeof(ttl_buf), "%d", ttl_seconds);
+    argv[0] = "EXPIRE";
+    argv[1] = (const char*)key;
+    argv[2] = ttl_buf;
+    return append_command_argv(c, 3, argv);
+}
+
+HL_PRIM bool HL_NAME(redis_append_sadd)(hl_redis* c, vbyte* key, vbyte* value) {
+    const char* argv[3];
+    argv[0] = "SADD";
+    argv[1] = (const char*)key;
+    argv[2] = (const char*)value;
+    return append_command_argv(c, 3, argv);
+}
+
+HL_PRIM bool HL_NAME(redis_append_srem)(hl_redis* c, vbyte* key, vbyte* value) {
+    const char* argv[3];
+    argv[0] = "SREM";
+    argv[1] = (const char*)key;
+    argv[2] = (const char*)value;
+    return append_command_argv(c, 3, argv);
+}
+
+HL_PRIM bool HL_NAME(redis_append_del)(hl_redis* c, vbyte* key) {
+    const char* argv[2];
+    argv[0] = "DEL";
+    argv[1] = (const char*)key;
+    return append_command_argv(c, 2, argv);
+}
+
+HL_PRIM bool HL_NAME(redis_subscribe)(hl_redis* c, vbyte* channel) {
+    redisReply* r;
+
+    if (!c || !c->ctx) return false;
+
+    r = (redisReply*)redisCommand(c->ctx, "SUBSCRIBE %s", (const char*)channel);
+    if (!r) return false;
+
+    freeReplyObject(r);
+    return true;
+}
+
+HL_PRIM bool HL_NAME(redis_unsubscribe)(hl_redis* c, vbyte* channel) {
+    redisReply* r;
+
+    if (!c || !c->ctx) return false;
+
+    r = (redisReply*)redisCommand(c->ctx, "UNSUBSCRIBE %s", (const char*)channel);
+    if (!r) return false;
+
+    freeReplyObject(r);
+    return true;
+}
+
+HL_PRIM int HL_NAME(redis_publish)(hl_redis* c, vbyte* channel, vbyte* message) {
+    redisReply* r;
+    int delivered;
+
+    if (!c || !c->ctx) return -1;
+
+    r = (redisReply*)redisCommand(c->ctx, "PUBLISH %s %s", (const char*)channel, (const char*)message);
+    if (!r) return -1;
+    if (r->type != REDIS_REPLY_INTEGER) {
+        freeReplyObject(r);
+        return -1;
+    }
+
+    delivered = (int)r->integer;
+    freeReplyObject(r);
+    return delivered;
+}
+
+HL_PRIM hl_redis_reply* HL_NAME(redis_get_reply)(hl_redis* c) {
+    redisReply* r;
+    void* raw = NULL;
+
+    if (!c || !c->ctx) return NULL;
+    if (redisGetReply(c->ctx, &raw) != REDIS_OK) return NULL;
+
+    r = (redisReply*)raw;
+    if (!r) return NULL;
+
+    hl_redis_reply* h = (hl_redis_reply*)hl_gc_alloc_finalizer(sizeof(hl_redis_reply));
+    h->finalize = reply_handle_finalizer;
+    h->r = r;
+    h->owner = 1;
+    return h;
+}
+
 HL_PRIM int HL_NAME(redis_reply_type)(hl_redis_reply* r) {
     if (!r || !r->r) return -1;
     return r->r->type;
@@ -143,6 +258,15 @@ DEFINE_PRIM(_BOOL,        redis_select, _REDIS _I32);
 DEFINE_PRIM(_VOID,        redis_close, _REDIS);
 
 DEFINE_PRIM(_REDIS_REPLY, redis_cmd, _REDIS _BYTES);
+DEFINE_PRIM(_BOOL,        redis_append_hset, _REDIS _BYTES _BYTES _BYTES);
+DEFINE_PRIM(_BOOL,        redis_append_expire, _REDIS _BYTES _I32);
+DEFINE_PRIM(_BOOL,        redis_append_sadd, _REDIS _BYTES _BYTES);
+DEFINE_PRIM(_BOOL,        redis_append_srem, _REDIS _BYTES _BYTES);
+DEFINE_PRIM(_BOOL,        redis_append_del, _REDIS _BYTES);
+DEFINE_PRIM(_BOOL,        redis_subscribe, _REDIS _BYTES);
+DEFINE_PRIM(_BOOL,        redis_unsubscribe, _REDIS _BYTES);
+DEFINE_PRIM(_I32,         redis_publish, _REDIS _BYTES _BYTES);
+DEFINE_PRIM(_REDIS_REPLY, redis_get_reply, _REDIS);
 
 DEFINE_PRIM(_I32,         redis_reply_type, _REDIS_REPLY);
 DEFINE_PRIM(_BYTES,       redis_reply_string, _REDIS_REPLY);
