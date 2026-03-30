@@ -13,12 +13,36 @@ class Pipeline {
 
 		appendOrThrow(
 			Redis.redis_append_hset(
-				h,
-				@:privateAccess key.toUtf8(),
-				@:privateAccess field.toUtf8(),
+				h, @:privateAccess key.toUtf8(), @:privateAccess field.toUtf8(),
 				@:privateAccess Std.string( value ).toUtf8()
 			),
 			"HSET"
+		);
+		return this;
+	}
+
+	public function hsetBytes( key : String, field : String, value : haxe.io.Bytes ) : Pipeline {
+
+		appendOrThrow(
+			Redis.redis_append_hset_bytes(
+				h, @:privateAccess key.toUtf8(), @:privateAccess field.toUtf8(),
+				value.getData().bytes,
+				value.length
+			),
+			"HSET"
+		);
+		return this;
+	}
+
+	public function setBytes( key : String, value : haxe.io.Bytes ) : Pipeline {
+
+		appendOrThrow(
+			Redis.redis_append_set_bytes(
+				h, @:privateAccess key.toUtf8(),
+				value.getData().bytes,
+				value.length
+			),
+			"SET"
 		);
 		return this;
 	}
@@ -53,7 +77,7 @@ class Pipeline {
 		return this;
 	}
 
-	public function exec( onDone : Bool -> Void ) : Void {
+	public function exec( ?onDone : Bool -> Void ) : Void {
 
 		var success = true;
 
@@ -70,12 +94,13 @@ class Pipeline {
 					success = false;
 				reply.free();
 			}
-		} catch ( e ) {
+		} catch( e ) {
 			success = false;
 		}
 
 		queued = 0;
-		onDone( success );
+		if ( onDone != null )
+			onDone( success );
 	}
 
 	inline function appendOrThrow( ok : Bool, command : String ) : Void {

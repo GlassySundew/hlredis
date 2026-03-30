@@ -35,6 +35,8 @@ var client = new redis.Client( "redis://:secret@127.0.0.1:6379/2" );
 ```
 
 Available helpers:
+* `setBytes( key, value ) : Bool`
+* `hgetBytes( key, field ) : Null<haxe.io.Bytes>`
 * `publish( channel, message ) : Int`
 * `subscribe( channel ) : Void`
 * `unsubscribe( channel ) : Void`
@@ -57,8 +59,35 @@ client.pipeline()
 
 Available pipeline helpers:
 * `hset( key, field, value ) : Pipeline`
+* `hsetBytes( key, field, value ) : Pipeline`
+* `setBytes( key, value ) : Pipeline`
 * `expire( key, ttlSeconds ) : Pipeline`
 * `sadd( key, value ) : Pipeline`
 * `srem( key, value ) : Pipeline`
 * `del( key ) : Pipeline`
 * `exec( onDone ) : Void`
+
+Binary values can be written without UTF-8 conversion:
+
+```haxe
+var payload = haxe.io.Bytes.alloc( 4 );
+payload.set( 0, 0 );
+payload.set( 1, 1 );
+payload.set( 2, 2 );
+payload.set( 3, 255 );
+
+client.setBytes( "blob:1", payload );
+```
+
+Hash fields can also store binary values:
+
+```haxe
+client.pipeline()
+	.hsetBytes( "player:state", "snapshot", payload )
+	.expire( "player:state", 10 )
+	.exec( function( success ) {
+		trace( success );
+	} );
+
+var loaded = client.hgetBytes( "player:state", "snapshot" );
+```

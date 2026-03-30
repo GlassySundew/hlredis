@@ -24,7 +24,23 @@ class Redis {
 		return null;
 	}
 
+	public static function redis_set_bytes( handle : RedisHandle, key : hl.Bytes, value : hl.Bytes, valueLen : Int ) : Bool {
+		return false;
+	}
+
+	public static function redis_hget_bytes( handle : RedisHandle, key : hl.Bytes, field : hl.Bytes ) : RedisReplyHandle {
+		return null;
+	}
+
 	public static function redis_append_hset( handle : RedisHandle, key : hl.Bytes, field : hl.Bytes, value : hl.Bytes ) : Bool {
+		return false;
+	}
+
+	public static function redis_append_hset_bytes( handle : RedisHandle, key : hl.Bytes, field : hl.Bytes, value : hl.Bytes, valueLen : Int ) : Bool {
+		return false;
+	}
+
+	public static function redis_append_set_bytes( handle : RedisHandle, key : hl.Bytes, value : hl.Bytes, valueLen : Int ) : Bool {
 		return false;
 	}
 

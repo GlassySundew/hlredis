@@ -122,6 +122,41 @@ class Client {
 		return new Reply( r );
 	}
 
+	public function setBytes( key : String, value : haxe.io.Bytes ) : Bool {
+
+		return Redis.redis_set_bytes(
+			h, @:privateAccess key.toUtf8(),
+			value.getData().bytes,
+			value.length
+		);
+	}
+
+	public function hgetBytes( key : String, field : String ) : Null<haxe.io.Bytes> {
+
+		var r = Redis.redis_hget_bytes(
+			h, @:privateAccess key.toUtf8(), @:privateAccess field.toUtf8()
+		);
+		if ( r == null )
+			throw "Redis HGET failed";
+
+		var reply = new Reply( r );
+		try {
+
+			var result = switch ( reply.type() ) {
+				case Reply.NIL: null;
+				case Reply.STRING, Reply.STATUS: reply.asBytes();
+				case Reply.ERROR: throw reply.asString();
+				default: throw "Unexpected Redis reply type: " + reply.type();
+			}
+			reply.free();
+			return result;
+		} catch ( e ) {
+
+			reply.free();
+			throw e;
+		}
+	}
+
 	public function publish( channel : String, message : String ) : Int {
 
 		var delivered = Redis.redis_publish( h, @:privateAccess channel.toUtf8(), @:privateAccess message.toUtf8() );

@@ -23,7 +23,13 @@ class Reply {
 	public function asString() : Null<String> {
 
 		var b = Redis.redis_reply_string( h );
-		return b == null ? null : @:privateAccess String.fromUTF8( b );
+		return b == null ? null : b.toBytes( length() ).toString();
+	}
+
+	public function asBytes() : Null<haxe.io.Bytes> {
+
+		var b = Redis.redis_reply_string( h );
+		return b == null ? null : b.toBytes( length() );
 	}
 
 	public function asInt() : Int {
