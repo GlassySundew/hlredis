@@ -6,6 +6,25 @@ private typedef RedisReplyHandle = hl.Abstract<"hl_redis_reply">;
 @:hlNative( "redis" )
 class Redis {
 
+	public static inline function parseRedisInt( value : String, fallback : Int ) : Int {
+
+		if ( value == null || value == "" )
+			return fallback;
+
+		final parsed = Std.parseInt( value );
+		return parsed != null ? parsed : fallback;
+	}
+
+	public static inline function parseRedisFloat( value : String, fallback : Float ) : Float {
+
+		if ( value == null || value == "" )
+			return fallback;
+
+		final parsed = Std.parseFloat( value );
+		return Math.isNaN( parsed ) ? fallback : parsed;
+	}
+
+	
 	public static function redis_connect( host : hl.Bytes, port : Int ) : RedisHandle {
 		return null;
 	}

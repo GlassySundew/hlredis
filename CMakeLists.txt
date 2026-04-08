@@ -1,10 +1,52 @@
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    message(FATAL_ERROR
-        "libs/hlredis must be built from the HashLink repository root.\n"
-        "Run CMake from the hashlink directory, for example:\n"
-        "  cmake -S /path/to/hashlink -B /path/to/hashlink/build-win "
-        "-G \"Visual Studio 17 2022\" -A x64 -DWITH_HLREDIS=ON -DDOWNLOAD_DEPENDENCIES=ON"
-    )
+    cmake_minimum_required(VERSION 3.13)
+    project(hlredis LANGUAGES C CXX)
+
+    include(GNUInstallDirs)
+    include(FindPkgConfig)
+    include(FetchContent)
+
+    set(HASHLINK_DIR "${CMAKE_CURRENT_LIST_DIR}/../.." CACHE PATH "Path to the HashLink repository root")
+
+    set(WITH_VM OFF CACHE BOOL "" FORCE)
+    set(WITH_FMT OFF CACHE BOOL "" FORCE)
+    set(WITH_OPENAL OFF CACHE BOOL "" FORCE)
+    set(WITH_SDL OFF CACHE BOOL "" FORCE)
+    set(WITH_SQLITE OFF CACHE BOOL "" FORCE)
+    set(WITH_SSL OFF CACHE BOOL "" FORCE)
+    set(WITH_UI OFF CACHE BOOL "" FORCE)
+    set(WITH_UV OFF CACHE BOOL "" FORCE)
+    set(WITH_VIDEO OFF CACHE BOOL "" FORCE)
+    set(WITH_HEAPS OFF CACHE BOOL "" FORCE)
+    set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    set(DOWNLOAD_DEPENDENCIES ON CACHE BOOL "" FORCE)
+
+    add_subdirectory("${HASHLINK_DIR}" hashlink-build EXCLUDE_FROM_ALL)
+
+    if(BUILD_SHARED_LIBS)
+        set(HDLL_SUFFIX .hdll)
+    else()
+        set(HDLL_SUFFIX .hdll${CMAKE_STATIC_LIBRARY_SUFFIX})
+    endif()
+
+    function(set_as_hdll target)
+        set_target_properties(${target}.hdll
+            PROPERTIES
+            PREFIX ""
+            OUTPUT_NAME ${target}
+            SUFFIX ${HDLL_SUFFIX}
+        )
+        if(NOT MSVC AND NOT APPLE)
+            target_link_options(${target}.hdll PRIVATE "-Wl,--no-undefined")
+        endif()
+    endfunction()
+
+    set(HDLL_DESTINATION ${CMAKE_BINARY_DIR}/bin)
+else()
+    include(FindPkgConfig)
+    if(DOWNLOAD_DEPENDENCIES)
+        include(FetchContent)
+    endif()
 endif()
 
 add_library(redis.hdll
@@ -69,6 +111,14 @@ if(WIN32)
     target_link_libraries(redis.hdll
         ws2_32
     )
+
+    if(TARGET hiredis::hiredis OR TARGET hiredis OR TARGET libhiredis)
+        add_custom_command(TARGET redis.hdll POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_FILE:${HIREDIS_TARGET}>
+                $<TARGET_FILE_DIR:redis.hdll>
+        )
+    endif()
 endif()
 
 install(
