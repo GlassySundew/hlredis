@@ -35,6 +35,8 @@ var client = new redis.Client( "redis://:secret@127.0.0.1:6379/2" );
 ```
 
 Available helpers:
+* `new redis.Script( script ).key( key ).arg( token ).invoke( client ) : Reply` builds an EVAL call with keys before arguments. Calls to `key()` and `arg()` can be chained; `invoke()` sends binary-safe strings through `cmdArgs()`.
+* `cmdArgs( ["GET", key] ) : Reply` sends each string as one Redis argument, including spaces, quotes, and newlines
 * `setBytes( key, value ) : Bool`
 * `hgetBytes( key, field ) : Null<haxe.io.Bytes>`
 * `publish( channel, message ) : Int`

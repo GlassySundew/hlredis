@@ -122,6 +122,38 @@ class Client {
 		return new Reply( r );
 	}
 
+	public function cmdArgs( arguments : Array<String> ) : Reply {
+
+		if ( arguments == null || arguments.length == 0 )
+			throw "Redis command requires arguments";
+
+		final args = new hl.NativeArray<hl.Bytes>( arguments.length );
+		final lengths = new hl.NativeArray<Int>( arguments.length );
+		for ( i in 0...arguments.length ) {
+
+			if ( arguments[i] == null )
+				throw "Redis command argument cannot be null";
+
+			final bytes = haxe.io.Bytes.ofString( arguments[i] );
+			args[i] = bytes.getData().bytes;
+			lengths[i] = bytes.length;
+		}
+
+		final r = Redis.redis_cmd_argv( h, args, lengths );
+		if ( r == null )
+			throw "Redis command failed";
+
+		final reply = new Reply( r );
+		if ( reply.type() == Reply.ERROR ) {
+
+			final error = reply.asString();
+			reply.free();
+			throw 'Redis command failed: $error';
+		}
+
+		return reply;
+	}
+
 	public function setBytes( key : String, value : haxe.io.Bytes ) : Bool {
 
 		return Redis.redis_set_bytes(

@@ -94,6 +94,40 @@ HL_PRIM hl_redis_reply* HL_NAME(redis_cmd)(hl_redis* c, vbyte* cmd) {
     return h;
 }
 
+HL_PRIM hl_redis_reply* HL_NAME(redis_cmd_argv)(hl_redis* c, varray* args, varray* lengths) {
+    const char** argv;
+    int* arg_lengths;
+    size_t* argvlen;
+    redisReply* r;
+    hl_redis_reply* h;
+    int i;
+
+    if (!c || !c->ctx || !args || !lengths || args->size == 0 || args->size != lengths->size) return NULL;
+
+    argv = (const char**)hl_aptr(args, vbyte*);
+    arg_lengths = hl_aptr(lengths, int);
+    argvlen = (size_t*)malloc(sizeof(size_t) * args->size);
+    if (!argvlen) return NULL;
+
+    for (i = 0; i < args->size; ++i) {
+        if (!argv[i] || arg_lengths[i] < 0) {
+            free(argvlen);
+            return NULL;
+        }
+        argvlen[i] = (size_t)arg_lengths[i];
+    }
+
+    r = (redisReply*)redisCommandArgv(c->ctx, args->size, argv, argvlen);
+    free(argvlen);
+    if (!r) return NULL;
+
+    h = (hl_redis_reply*)hl_gc_alloc_finalizer(sizeof(hl_redis_reply));
+    h->finalize = reply_handle_finalizer;
+    h->r = r;
+    h->owner = 1;
+    return h;
+}
+
 static bool append_command_argv_len(hl_redis* c, int argc, const char** argv, const size_t* lens) {
     if (!c || !c->ctx) return false;
     return redisAppendCommandArgv(c->ctx, argc, argv, lens) == REDIS_OK;
@@ -376,6 +410,7 @@ DEFINE_PRIM(_BOOL,        redis_select, _REDIS _I32);
 DEFINE_PRIM(_VOID,        redis_close, _REDIS);
 
 DEFINE_PRIM(_REDIS_REPLY, redis_cmd, _REDIS _BYTES);
+DEFINE_PRIM(_REDIS_REPLY, redis_cmd_argv, _REDIS _ARR _ARR);
 DEFINE_PRIM(_BOOL,        redis_set_bytes, _REDIS _BYTES _BYTES _I32);
 DEFINE_PRIM(_REDIS_REPLY, redis_hget_bytes, _REDIS _BYTES _BYTES);
 DEFINE_PRIM(_BOOL,        redis_append_hset, _REDIS _BYTES _BYTES _BYTES);

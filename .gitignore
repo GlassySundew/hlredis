@@ -1,2 +1,2 @@
 *.hdll
-build-win/
+build-*/

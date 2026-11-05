@@ -43,6 +43,10 @@ class Redis {
 		return null;
 	}
 
+	public static function redis_cmd_argv( handle : RedisHandle, args : hl.NativeArray<hl.Bytes>, lengths : hl.NativeArray<Int> ) : RedisReplyHandle {
+		return null;
+	}
+
 	public static function redis_set_bytes( handle : RedisHandle, key : hl.Bytes, value : hl.Bytes, valueLen : Int ) : Bool {
 		return false;
 	}
