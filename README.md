@@ -7,8 +7,8 @@
 ##### Windows
  * run `build.bat` at repo root
 ##### Linux
- * make sure to install hiredis dev `sudo apt install libhiredis-dev` for ubuntu
- * run `make` inside repo root
+ * Run `sh build.sh` in this directory. CMake downloads and builds hiredis. Output: `build-linux/redis.hdll`.
+ * Pass extra CMake options as arguments, for example `sh build.sh -DDOWNLOAD_DEPENDENCIES=OFF` to use installed hiredis development files.
 
 ## Pub/Sub
 Use a dedicated subscriber connection when listening for events, because a Redis connection in subscribed mode is effectively reserved for pub/sub traffic.

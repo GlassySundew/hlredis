@@ -58,9 +58,14 @@ set_as_hdll(redis)
 set(HIREDIS_TARGET "")
 
 if(DOWNLOAD_DEPENDENCIES)
+    # hiredis 1.2.0 declares CMake 3.0; CMake 4 requires at least 3.5.
+    if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.0 AND NOT DEFINED CMAKE_POLICY_VERSION_MINIMUM)
+        set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+    endif()
     FetchContent_Declare(hiredis-project
         URL https://github.com/redis/hiredis/archive/refs/tags/v1.2.0.tar.gz
         URL_HASH SHA256=82ad632d31ee05da13b537c124f819eb88e18851d9cb0c30ae0552084811588c
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
         EXCLUDE_FROM_ALL
     )
     set(DISABLE_TESTS ON CACHE INTERNAL "")
